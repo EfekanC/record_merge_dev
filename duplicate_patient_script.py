@@ -32,6 +32,37 @@ def update_table(table_name, old_value, new_value):
             cursor.close()
             connection.close()
 
+def update_invoice_items_customer_id(patient):
+    try:
+        connection = mysql.connector.connect(
+            host=os.getenv('MYSQL_HOST'),
+            user=os.getenv('MYSQL_USER'),
+            password=os.getenv('MYSQL_PASSWORD'),
+            database=os.getenv('MYSQL_DB')
+        )
+
+        cursor = connection.cursor()
+
+        sql_query = """
+            UPDATE invoice_items
+            JOIN users ON users.patient = invoice_items.patient
+            JOIN customers ON customers.user = users.id
+            SET invoice_items.customer = customers.id
+            WHERE invoice_items.patient = %s
+            AND invoice_items.invoice IS NULL;
+        """
+        cursor.execute(sql_query, (patient,))
+        connection.commit()
+
+        print(f"Customer IDs updated in invoice_items: {cursor.rowcount}")
+    except mysql.connector.Error as error:
+        print(f"Error: {error}")
+    
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
 if __name__ == '__main__':
     old_value = input("Enter the old value: ")
     new_value = input("Enter the new value: ")
@@ -40,3 +71,5 @@ if __name__ == '__main__':
 
     for table in tables_to_update:
         update_table(table, old_value, new_value)
+    
+    update_invoice_items_customer_id(new_value)
